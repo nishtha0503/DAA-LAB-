@@ -1,66 +1,52 @@
 #include <stdio.h>
+#include <float.h>  // for DBL_MAX
 
-#define N 5  
+int main() {
+    int n;
+    printf("Enter number of book IDs (n): ");
+    scanf("%d", &n);
 
-int G[N][N] = {
-    {0, 1, 1, 0, 1},  // A
-    {1, 0, 1, 1, 0},  // B
-    {1, 1, 0, 1, 0},  // C
-    {0, 1, 1, 0, 1},  // D
-    {1, 0, 0, 1, 0}   // E
-};
+    int keys[n + 1];
+    double p[n + 1], q[n + 2];
+    double e[n + 2][n + 2];  // Expected cost
+    double w[n + 2][n + 2];  // Weight sum
+    int root[n + 1][n + 1];  // For reconstruction (optional)
 
-int x[N];
+    printf("Enter %d sorted book IDs:\n", n);
+    for (int i = 1; i <= n; i++)
+        scanf("%d", &keys[i]);
 
+    printf("Enter %d successful search probabilities (p[i]):\n", n);
+    for (int i = 1; i <= n; i++)
+        scanf("%lf", &p[i]);
 
-void NextValue(int k) {
-    int j;
-    while (1) {
-        x[k] = (x[k] + 1) % (N + 1);  
-        if (x[k] == 0)
-            return; 
+    printf("Enter %d unsuccessful search probabilities (q[i]):\n", n + 1);
+    for (int i = 0; i <= n; i++)
+        scanf("%lf", &q[i]);
 
-        if (G[x[k - 1]][x[k]] != 0) { 
-            for (j = 0; j < k; j++)   
-                if (x[j] == x[k])
-                    break;
+    // Initialize e[i][i-1] and w[i][i-1]
+    for (int i = 1; i <= n + 1; i++) {
+        e[i][i - 1] = q[i - 1];
+        w[i][i - 1] = q[i - 1];
+    }
 
-            if (j == k) { 
-                if ((k < N - 1) || ((k == N - 1) && (G[x[N - 1]][x[0]] != 0)))
-                    return;
+    // Main DP computation
+    for (int l = 1; l <= n; l++) { // l = length of subtree
+        for (int i = 1; i <= n - l + 1; i++) {
+            int j = i + l - 1;
+            e[i][j] = DBL_MAX;
+            w[i][j] = w[i][j - 1] + p[j] + q[j];
+            for (int r = i; r <= j; r++) {
+                double t = e[i][r - 1] + e[r + 1][j] + w[i][j];
+                if (t < e[i][j]) {
+                    e[i][j] = t;
+                    root[i][j] = r;
+                }
             }
         }
     }
-}
 
-
-void Hamiltonian(int k) {
-    while (1) {
-        NextValue(k);
-        if (x[k] == 0)
-            return;
-
-        if (k == N - 1) { 
-            printf("\nHamiltonian Cycle Found: ");
-            for (int i = 0; i < N; i++)
-                printf("%c -> ", 'A' + x[i]);
-            printf("%c\n", 'A' + x[0]); 
-        } else {
-            Hamiltonian(k + 1);
-        }
-    }
-}
-
-int main() {
-    printf("Smart City Hamiltonian Cycle Finder (Areas: A, B, C, D, E)\n");
-    printf("-----------------------------------------------------------\n");
-
-    // Initialize path with zeros
-    for (int i = 0; i < N; i++)
-        x[i] = 0;
-
-    x[0] = 0; // Start from vertex A (index 0)
-    Hamiltonian(1);
-
+    printf("\nMinimum expected cost of OBST = %.4lf\n", e[1][n]);
     return 0;
 }
+
